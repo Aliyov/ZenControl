@@ -21,6 +21,7 @@ ZenControl switches the laptop between performance and power-saving modes with o
 - [Safety](#safety)
 - [Installation](#installation)
 - [Test results](#test-results)
+- [Benchmark](#benchmark)
 - [Customizing modes](#customizing-modes)
 - [Project layout](#project-layout)
 - [Stability testing](#stability-testing)
@@ -240,6 +241,35 @@ Tested on a UX535QE on AC power. The GPU was loaded with a CUDA compute workload
 The stress test found no calculation errors in any mode. Max Performance was tested with a single CPU thread only.
 
 Also verified: Dynamic Boost on/off, SMT on/off (16 ↔ 8 threads online), charge limit 80 % / 100 %, Stock restore, and rejection of invalid values.
+
+---
+
+## Benchmark
+
+A full benchmark of every mode on AC power is in **[bench/REPORT.md](bench/REPORT.md)**: 15 tests per mode (hashing, compression, video encoding, OpenGL, GPU hashing, CUDA and a game-like load), with temperatures, power and fan speed for each.
+
+![Speed relative to Max Performance](bench/ac/relative.png)
+
+| | Extreme Powersave | Balanced | Performance | Max Performance |
+|---|---|---|---|---|
+| CPU speed, sustained 3 min | 55 % | 88 % | 99 % | 100 % |
+| GPU speed | 54–56 % | 81–85 % | 85–93 % | 100 % |
+| Max CPU temp, heavy CPU load | 57 °C | 73 °C | 78 °C | 95 °C |
+| GPU + CPU together (game-like) | 57 °C | 72 °C | 76 °C | stopped at 95 °C after ~5 s |
+
+**Recommendation:** use **Balanced** for everyday work and most games, **Performance** when you need more CPU power, and **Extreme Powersave** on battery. Avoid Max Performance for gaming: it reaches 95 °C within seconds under combined CPU and GPU load, and it is only 1 % faster than Performance in sustained work.
+
+### Running the benchmark
+
+```sh
+mkdir -p /tmp/zbench
+gcc -O2 -mavx2 -mfma -pthread diag/stress.c -o /tmp/zbench/stress
+gcc -O2 diag/gpuburn.c -o /tmp/zbench/gpuburn -lcuda
+python3 diag/bench.py bench/ac /tmp/zbench          # all modes, about 2 hours
+python3 diag/charts.py bench/ac                     # charts
+```
+
+Requires `openssl`, `7z`, `ffmpeg`, `glmark2` and `hashcat`. Set `BENCH_TESTS=python,7zip` to run only some tests, or pass mode names to test only those modes.
 
 ---
 

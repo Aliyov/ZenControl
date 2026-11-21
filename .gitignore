@@ -4,3 +4,4 @@ diag/stress
 diag/*.pid
 diag/*.log
 diag/*.csv
+bench/*/*.log
