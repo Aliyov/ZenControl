@@ -35,10 +35,6 @@ def _hwmons():
 HW = _hwmons()
 
 
-def ncpus():
-    return len(glob.glob(f"{CPU}/cpu[0-9]*/cpufreq"))
-
-
 def cpu_freqs_mhz():
     res = []
     for i in range(os.cpu_count() or 16):

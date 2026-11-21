@@ -61,18 +61,29 @@ To uninstall:
 
 | Mode | CPU | GPU | Firmware profile |
 |---|---|---|---|
-| Max Performance | boost on, up to 4465 MHz | stock limit, Dynamic Boost on | performance |
-| Performance | boost off, 3200 MHz | 30 W base limit, Dynamic Boost off | performance |
+| Max Performance | boost on, up to 4465 MHz | no cap, Dynamic Boost on | performance |
+| Performance | boost off, 3200 MHz | no cap, Dynamic Boost off | performance |
 | Balanced | 2800 MHz, `balance_performance` | capped at 1400 MHz | balanced |
-| Extreme Powersave | 1800 MHz, `power` EPP | left alone so it can sleep | quiet |
+| Extreme Powersave | 1800 MHz, `power` EPP | capped at 900 MHz | quiet |
 | Stock | values saved on first run | default | as saved |
 
 Modes are defined in [`data/profiles.json`](data/profiles.json) and can be edited.
 
+### Measured on a UX535QE (AC power)
+
+Full GPU compute load and 16-thread AVX2 CPU load, run separately:
+
+| Mode | GPU clock | GPU power | CPU all-core | CPU temp |
+|---|---|---|---|---|
+| Max Performance | 1770 MHz | 40 W (limit 50 W) | up to 4424 MHz single-core | — |
+| Performance | 1770 MHz | 35 W (limit 35 W) | 3169 MHz | 78 °C |
+| Balanced | 1395 MHz | 28 W | 2795 MHz | 69 °C |
+| Extreme Powersave | 900 MHz | 16 W | 1777 MHz | 52 °C |
+
 ### GPU notes
 
-- On the UX535QE the driver does not allow changing the GPU power limit, so that control is disabled and modes limit the GPU with a clock cap instead. At full load, 1400 MHz draws about 15 W versus about 18 W uncapped (measured with `glxgears`).
-- Without Dynamic Boost the GPU is held at its 30 W base limit. The BIOS only enables Dynamic Boost on AC power.
+- On the UX535QE the driver does not allow changing the GPU power limit, so that control is disabled and modes limit the GPU with a clock cap instead.
+- Without Dynamic Boost the GPU limit is 35 W on AC and 30 W on battery. The BIOS only enables Dynamic Boost (up to 50 W) on AC power.
 
 ## Project layout
 

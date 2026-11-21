@@ -150,7 +150,7 @@ class Window(Adw.ApplicationWindow):
         gg = Adw.PreferencesGroup(title="NVIDIA GPU",
                                   description="Setting these wakes the GPU briefly.")
         self.w_dboost = self._switch(gg, "Dynamic Boost (nvidia-powerd)", "dynamic_boost",
-                                     "Lets the GPU go above 35 W, up to 50 W")
+                                     "Lets the GPU go above 35 W, up to 50 W (AC only)")
         self.w_gpuw = self._spin(gg, "GPU power limit (W)", 10, 50, 1, "gpu_power_w",
                                  "Checking support when the GPU wakes")
         self.w_gpuw.set_sensitive(False)

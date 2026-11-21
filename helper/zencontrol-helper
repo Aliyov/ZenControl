@@ -254,7 +254,10 @@ def main():
         raw = sys.argv[2]
         if len(raw) > 4096:
             sys.exit("input too large")
-        settings = json.loads(raw)
+        try:
+            settings = json.loads(raw)
+        except ValueError:
+            sys.exit("invalid JSON")
         if not isinstance(settings, dict):
             sys.exit("settings must be an object")
         print(json.dumps(apply(settings)))
