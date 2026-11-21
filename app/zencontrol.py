@@ -139,7 +139,7 @@ class Window(Adw.ApplicationWindow):
     def _build_manual(self, page):
         g = Adw.PreferencesGroup(title="Manual", description="Changes are applied when you press Apply.")
         self.w_boost = self._switch(g, "CPU boost", "boost", "Clocks above 3.2 GHz (high voltage)")
-        self.w_freq = self._spin(g, "Max CPU frequency (MHz)", 1100, 4465, 100, "max_freq_mhz")
+        self.w_freq = self._spin(g, "Max CPU frequency (MHz)", 1200, 4465, 100, "max_freq_mhz")
         self.w_gov = self._combo(g, "Governor", GOVERNORS, "governor")
         self.w_epp = self._combo(g, "Energy preference", EPPS, "epp",
                                  "Only adjustable with the powersave governor")

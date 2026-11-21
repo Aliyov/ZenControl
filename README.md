@@ -136,7 +136,7 @@ Change any value and press **Apply**. Nothing is changed until then. **Discard c
 | Control | Range | Description |
 |---|---|---|
 | **CPU boost** | on / off | Allows clocks above the 3.2 GHz base, up to 4465 MHz. Boost clocks need significantly higher voltage, so disabling boost is the most effective way to reduce CPU heat and power. |
-| **Max CPU frequency** | 1100–4465 MHz | Upper clock limit for all cores. With boost off, the effective limit is 3200 MHz even if a higher value is set; the app shows a reminder. |
+| **Max CPU frequency** | 1200–4465 MHz | Upper clock limit for all cores. With boost off, the effective limit is 3200 MHz even if a higher value is set; the app shows a reminder. |
 | **Governor** | performance / powersave | `performance` keeps clocks high at all times. `powersave` scales clocks to the workload, and how aggressively depends on the energy preference. |
 | **Energy preference (EPP)** | performance, balance_performance, balance_power, power | Tells the CPU how much to favor speed over efficiency. Only adjustable with the `powersave` governor; with `performance` it is fixed to `performance`. |
 | **ASUS firmware profile** | performance / balanced / quiet | The laptop's built-in power profile, which sets the firmware's power limits. Fan state is saved before the change and restored right after, so your fan control is unaffected. |
