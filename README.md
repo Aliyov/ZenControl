@@ -1,8 +1,8 @@
 # ZenControl
 
-**One app to choose how fast, how cool and how long-lasting your laptop is.**
+CPU and GPU power control for the **ASUS Zenbook UX535QE** on Linux.
 
-ZenControl is a Linux app for the **ASUS Zenbook UX535QE**. With one click you can make the laptop fast for games, quiet and cool for school work, or super thrifty when the battery is low. It also shows you what is happening inside the laptop, live, while you use it.
+ZenControl switches the laptop between performance and power-saving modes with one click, or lets you set each limit by hand. It shows temperatures, clock speeds, power draw, fan speed and battery status live.
 
 <p align="center">
   <img src="screenshots/overview.png" width="420" alt="Quick modes and live sensors">
@@ -11,201 +11,198 @@ ZenControl is a Linux app for the **ASUS Zenbook UX535QE**. With one click you c
 
 ## Contents
 
-- [The big idea](#the-big-idea)
-- [A few words you will see](#a-few-words-you-will-see)
-- [Quick modes](#quick-modes)
-- [The Live section](#the-live-section)
+- [Hardware](#hardware)
+- [Modes](#modes)
+- [Live monitoring](#live-monitoring)
 - [Manual controls](#manual-controls)
 - [NVIDIA GPU controls](#nvidia-gpu-controls)
 - [Advanced controls](#advanced-controls)
 - [Apps keeping the NVIDIA GPU awake](#apps-keeping-the-nvidia-gpu-awake)
-- [Is it safe?](#is-it-safe)
-- [Installing](#installing)
+- [Safety](#safety)
+- [Installation](#installation)
 - [Test results](#test-results)
-- [For tinkerers](#for-tinkerers)
+- [Customizing modes](#customizing-modes)
+- [Project layout](#project-layout)
+- [Stability testing](#stability-testing)
 
 ---
 
-## The big idea
+## Hardware
 
-Your laptop has two "brains":
-
-- The **CPU** is the main brain. It thinks about everything: opening apps, loading web pages, running games.
-- The **GPU** is the artist. It draws the pictures you see in games and videos. This laptop has a small built-in artist (inside the AMD chip) for easy jobs, and a big strong artist, the **NVIDIA GeForce RTX 3050 Ti**, for heavy jobs like games.
-
-Both brains can work **fast** or **slow**:
-
-- Working fast is great for games, but it uses a lot of energy. The battery empties quicker, the laptop gets hot, and the fans get loud.
-- Working slowly saves energy. The battery lasts longer and the laptop stays cool and quiet, but heavy things run slower.
-
-It's like running versus walking. Running gets you there sooner, but you get tired and sweaty. Walking is slower, but you can keep going for a long time.
-
-**ZenControl lets you choose: run, jog, walk, or stroll.**
-
----
-
-## A few words you will see
-
-| Word | What it means |
+| Component | Details |
 |---|---|
-| **MHz** (megahertz) | How many tiny steps a brain takes every second. 1000 MHz is a billion steps per second! More MHz = faster. |
-| **GHz** (gigahertz) | 1 GHz = 1000 MHz. So 3.2 GHz = 3200 MHz. |
-| **W** (watts) | How much energy something eats right now. More watts = battery empties faster and more heat. |
-| **°C** | Temperature. Laptop brains are happy below about 80 °C. Above 90 °C is very hot. |
-| **RPM** | How fast the fans spin (turns per minute). Higher = more cooling, but louder. |
-| **Core** | The CPU is really 8 small brains working together. Each one is a "core". |
-| **Thread** | Each core can juggle 2 jobs at once, so 8 cores give 16 "threads". |
-| **AC** | Plugged into the wall charger. |
+| CPU | AMD Ryzen, 8 cores / 16 threads, 1.1–4.465 GHz, `amd-pstate-epp` driver |
+| Integrated GPU | AMD Radeon (inside the CPU), used for the desktop and light work |
+| Dedicated GPU | NVIDIA GeForce RTX 3050 Ti Laptop GPU, 4 GB, up to 2100 MHz |
+| GPU power | 30 W on battery, 35 W on AC, up to 50 W on AC with Dynamic Boost |
+
+The NVIDIA GPU powers off completely when no app is using it, and turns on automatically when a game or GPU app starts.
 
 ---
 
-## Quick modes
+## Modes
 
-These are the big buttons at the top. Press one and every setting changes at once. You don't need to touch anything else.
+Each button applies a full set of settings at once. The first change asks for your password (via polkit). It is remembered for a few minutes.
 
-The first time you press a button, your computer asks for your password. This is normal: changing how the hardware works needs permission, like asking a parent before changing the TV settings. It remembers the password for a few minutes.
+All changes reset on reboot.
 
-### 🔴 Max Performance: *sprinting*
+### Summary
 
-Everything goes as fast as it can.
+| | Max Performance | Performance | Balanced | Extreme Powersave |
+|---|---|---|---|---|
+| **CPU max frequency** | 4465 MHz | 3200 MHz | 2800 MHz | 1800 MHz |
+| **CPU boost** | on | off | off | off |
+| **CPU governor** | performance | performance | powersave | powersave |
+| **Energy preference (EPP)** | performance | performance | balance_performance | power |
+| **ASUS firmware profile** | performance | performance | balanced | quiet |
+| **GPU max clock** | no cap (≈1770 MHz) | no cap (≈1770 MHz) | 1400 MHz | 900 MHz |
+| **NVIDIA Dynamic Boost** | on | off | off | off |
+| **GPU power under full load (AC)** | ≈40 W, limit 50 W | ≈35 W, limit 35 W | ≈28 W | ≈16 W |
+| **CPU temp, all cores loaded** | — | 78 °C | 69 °C | 52 °C |
 
-- The CPU can **boost** up to 4.465 GHz, its top speed.
-- The NVIDIA GPU can use up to **50 W** when plugged in (using a feature called *Dynamic Boost*, explained below).
-- The ASUS firmware is set to "performance", so the laptop allows itself more power.
+### Max Performance
 
-**Good for:** big games, video editing, anything heavy, **while plugged in**.
+All limits removed. These are the factory settings.
 
-**Watch out:** this uses the most energy and makes the most heat. On the developer's laptop, sudden restarts happened with these settings under very heavy load. That's why the button is red and the app asks "Are you sure?" before turning it on.
+- **CPU:** boost enabled, up to **4465 MHz** on one or two cores for short bursts. With all cores busy it runs lower, depending on temperature and power.
+- **Governor / EPP:** `performance` / `performance`. The CPU stays at high clocks and reacts instantly.
+- **ASUS profile:** `performance`, the highest firmware power limits.
+- **GPU:** no clock cap, with Dynamic Boost on. On AC the GPU may use up to **50 W**. Measured: 1770 MHz at ≈40 W under full compute load.
 
-### ⚪ Performance: *running*
+**Use for:** demanding games, rendering and compiling, on AC power.
 
-Fast, but without the extra sprint.
+**Note:** this is the highest power and heat configuration. Sudden restarts have been observed with these settings under heavy combined CPU and GPU load, so the app asks for confirmation before enabling it.
 
-- CPU **boost is off**, so it stays at up to 3.2 GHz. That's still fast, but it needs much less power and heat than boosting.
-- The GPU runs at full speed, but **without Dynamic Boost**, so it stays at its normal limit: 35 W when plugged in, 30 W on battery.
-- ASUS firmware profile: "performance".
+### Performance
 
-**Good for:** most games and heavy work, with less heat and more stability than Max Performance. **A great everyday "fast" mode.**
+Near full speed, without CPU boost or GPU Dynamic Boost.
 
-### ⚪ Balanced: *jogging*
+- **CPU:** boost disabled, max **3200 MHz** on all cores. That's about 72 % of peak frequency, but power and heat drop much more than that, because the boost range needs much higher voltage.
+- **Governor / EPP:** `performance` / `performance`.
+- **ASUS profile:** `performance`.
+- **GPU:** no clock cap, Dynamic Boost off. The GPU runs at full clock but within its base power limit: **35 W on AC**, 30 W on battery. Measured: 1770 MHz at ≈35 W.
 
-A middle path between speed and saving energy.
+**Use for:** gaming and heavy work when you want less heat and better stability than Max Performance. Measured 78 °C with all 16 threads loaded.
 
-- The CPU can go up to **2.8 GHz**. It uses a smart setting that speeds up when you need it and slows down when you don't.
-- The NVIDIA GPU is **capped at 1400 MHz**, which keeps it at about 28 W at most.
-- ASUS firmware profile: "balanced".
+### Balanced
 
-**Good for:** school work, browsing, videos, light games, on battery or plugged in.
+Moderate performance with lower power draw. Suitable on battery or AC.
 
-### 🟢 Extreme Powersave: *strolling*
+- **CPU:** boost disabled, max **2800 MHz**.
+- **Governor / EPP:** `powersave` / `balance_performance`. Despite its name, the `powersave` governor is not slow: it raises clocks when there is work and drops them when idle. `balance_performance` makes it ramp up quickly.
+- **ASUS profile:** `balanced`.
+- **GPU:** capped at **1400 MHz**, Dynamic Boost off. Measured: ≈28 W under full load, versus ≈35 W uncapped.
 
-Everything goes slow and gentle, so the battery lasts as long as possible.
+**Use for:** everyday work, browsing, video, light gaming. Measured 69 °C with all 16 threads loaded.
 
-- The CPU is limited to **1.8 GHz** and is told to save energy whenever it can.
-- The NVIDIA GPU is **capped at 900 MHz** (about 16 W at most).
-- ASUS firmware profile: "quiet", so the laptop stays cool and silent.
+### Extreme Powersave
 
-**Good for:** reading, writing, watching videos, when the battery is low, or when you're far from a charger.
+Maximum battery life, lowest heat and fan noise.
 
-### ⚪ Stock: *back to how it was*
+- **CPU:** boost disabled, max **1800 MHz**.
+- **Governor / EPP:** `powersave` / `power`. The CPU prefers low clocks and only ramps up when necessary.
+- **ASUS profile:** `quiet`, the lowest firmware power limits.
+- **GPU:** capped at **900 MHz**, Dynamic Boost off. Measured: ≈16 W under full load, less than half of Performance.
 
-The very first time you change anything, ZenControl takes a "photo" of all your settings as they were. Pressing **Stock** puts everything back the way that photo shows.
+**Use for:** reading, writing, video playback, and long sessions on battery. Measured 52 °C with all 16 threads loaded, and about 15 W CPU power.
 
-On the UX535QE, the factory settings are the same as Max Performance.
+### Stock
 
-> 💡 **Tip:** Restarting the laptop also puts everything back to the factory settings. ZenControl never makes permanent changes.
+The first time any setting is changed, ZenControl saves the current values to `/var/lib/zencontrol/stock.json`. **Stock** restores exactly those values.
+
+On the UX535QE the factory configuration matches Max Performance. A reboot also restores factory settings.
 
 ---
 
-## The Live section
+## Live monitoring
 
-This part is like a car dashboard. It updates every 2 seconds so you can see what's going on inside.
+Updates every 2 seconds.
 
-| Row | What it tells you |
+| Row | Shows |
 |---|---|
-| **CPU** | How hot the main brain is (°C), how much energy it eats right now (W), and its average speed (MHz). |
-| **Fans (zenfan)** | How fast the two fans spin (RPM), and what the separate fan program *zenfan* is doing. ZenControl never controls the fans itself; it just shows you. If zenfan isn't installed, it says "not running". |
-| **NVIDIA GPU** | Whether the big artist is **asleep** (uses 0 W, great for battery) or **awake**. When awake, it also shows its temperature, how much energy it uses compared to its limit, and its speed. |
-| **Battery** | How full the battery is (%). When plugged in, it shows how fast it's charging. On battery, it shows how fast it's emptying and roughly how many hours are left. |
+| **CPU** | Temperature (Tctl), package power in watts, average clock across all threads |
+| **Fans (zenfan)** | CPU and GPU fan speed in RPM, and the status reported by the separate `zenfan` fan daemon. ZenControl never changes fan settings. |
+| **NVIDIA GPU** | `asleep (0 W)` when powered off. When awake: temperature, current power / power limit, and graphics clock. |
+| **Battery** | Charge level. On AC: charging status and charge rate. On battery: current discharge in watts and estimated hours remaining. |
 
-Below that are **16 little bars**, one for each CPU thread. A long bar means that thread is running fast right now; a short bar means it's resting. "off" means that thread is switched off (see SMT below).
+Below the rows, 16 bars show the current clock of each CPU thread. `off` means the thread is disabled (SMT off).
 
 ---
 
 ## Manual controls
 
-Want to choose things yourself instead of using a quick mode? Change anything here, then press **Apply**. Nothing changes until you press Apply. Changed your mind? Press **Discard changes** and everything goes back to how it really is right now.
+Change any value and press **Apply**. Nothing is changed until then. **Discard changes** reloads the current system values.
 
-| Control | What it does |
-|---|---|
-| **CPU boost** | Lets the CPU go above 3.2 GHz for short bursts, up to 4.465 GHz. It's like a sprint: very fast, but it needs a lot more power and makes a lot more heat. Turning it off is one of the best ways to keep the laptop cool. |
-| **Max CPU frequency** | The CPU's speed limit, in MHz. Like a speed limit sign on a road: the CPU can go slower, but never faster. If boost is off, the CPU can't go above 3200 MHz anyway, and the app will remind you. |
-| **Governor** | The CPU's "driving style". **performance** = always ready to go fast. **powersave** = smart, speeds up only when there's work to do. Don't worry about the name: "powersave" can still be fast! |
-| **Energy preference** | Only works with the *powersave* governor. It tells the CPU how eager to be, from **performance** (very eager) through **balance_performance** and **balance_power** to **power** (very lazy, saves the most energy). |
-| **ASUS firmware profile** | A setting built into the laptop by ASUS. **performance** lets the whole laptop use more power, **balanced** is in the middle, and **quiet** keeps it cool and silent. Your fan settings stay exactly as they were when you change this. |
+| Control | Range | Description |
+|---|---|---|
+| **CPU boost** | on / off | Allows clocks above the 3.2 GHz base, up to 4465 MHz. Boost clocks need significantly higher voltage, so disabling boost is the most effective way to reduce CPU heat and power. |
+| **Max CPU frequency** | 1100–4465 MHz | Upper clock limit for all cores. With boost off, the effective limit is 3200 MHz even if a higher value is set; the app shows a reminder. |
+| **Governor** | performance / powersave | `performance` keeps clocks high at all times. `powersave` scales clocks to the workload, and how aggressively depends on the energy preference. |
+| **Energy preference (EPP)** | performance, balance_performance, balance_power, power | Tells the CPU how much to favor speed over efficiency. Only adjustable with the `powersave` governor; with `performance` it is fixed to `performance`. |
+| **ASUS firmware profile** | performance / balanced / quiet | The laptop's built-in power profile, which sets the firmware's power limits. Fan state is saved before the change and restored right after, so your fan control is unaffected. |
 
 ---
 
 ## NVIDIA GPU controls
 
-These control the big artist. Changing them wakes the GPU up for a moment, and then it can go back to sleep.
+Applying these briefly wakes the GPU if it is asleep. It powers off again once idle.
 
-| Control | What it does |
-|---|---|
-| **Dynamic Boost** | When the CPU isn't busy, this lets the GPU borrow some of the CPU's energy, so the GPU can go from 35 W up to 50 W. That means smoother games. It only works **when plugged in**: the laptop turns it off on battery by itself. |
-| **GPU power limit** | On some laptops this sets the most watts the GPU may use. On the UX535QE, NVIDIA doesn't allow changing it, so it's greyed out. Use **GPU max clock** instead. |
-| **GPU max clock** | The GPU's speed limit in MHz. A lower number means less energy and less heat. **0** means "no limit". For example, 1400 MHz keeps it around 28 W and 900 MHz around 16 W. |
+| Control | Range | Description |
+|---|---|---|
+| **Dynamic Boost** | on / off | Runs NVIDIA's `nvidia-powerd` service, which moves power from the CPU to the GPU when the CPU is lightly loaded. This raises the GPU limit from 35 W to up to **50 W**. The BIOS only allows it **on AC power**; on battery it has no effect. |
+| **GPU power limit** | — | Not adjustable on the UX535QE (the driver reports it as unsupported), so it is disabled in the UI. Use the GPU max clock instead. |
+| **GPU max clock** | 300–2100 MHz, 0 = no cap | Caps the graphics clock. This is the effective way to limit GPU power on this laptop. Measured under full load: 900 MHz ≈ 16 W, 1400 MHz ≈ 28 W, uncapped ≈ 35–41 W. |
 
 ---
 
 ## Advanced controls
 
-| Control | What it does |
-|---|---|
-| **SMT (2 threads per core)** | Normally each of the 8 CPU cores juggles 2 jobs at once, giving 16 threads. Turning SMT **off** makes each core do just 1 job, so 8 threads. That can save a bit of energy and heat, but busy programs get slower. Most people should leave it **on**. |
-| **Battery charge limit** | Stops charging when the battery reaches this level. Batteries are like balloons: always filling them to the very top wears them out faster. If your laptop is plugged in most of the time, setting **80 %** helps the battery stay healthy for more years. Set **100 %** before a trip when you need every bit of battery. |
+| Control | Range | Description |
+|---|---|---|
+| **SMT** | on / off | Simultaneous multithreading: each of the 8 cores runs 2 threads, 16 in total. Turning it off leaves 8 threads, which slightly reduces power and heat but lowers multi-threaded performance. Applies immediately. Leave it on unless you have a specific reason. |
+| **Battery charge limit** | 60–100 % | Stops charging at the chosen level. Keeping a lithium battery at 100 % for long periods speeds up wear, so **80 %** is a good choice if the laptop is usually plugged in. Set 100 % before you need full capacity. |
 
 ---
 
 ## Apps keeping the NVIDIA GPU awake
 
-The big NVIDIA artist uses about **6–8 W just by being awake**, even doing nothing. When no app needs it, it falls asleep on its own and that energy is saved, which can mean much more battery time.
+An idle but powered-on NVIDIA GPU uses about **6–8 W**, which costs a lot of battery time. It powers off automatically when no app holds it open.
 
-This list shows which apps are keeping it awake:
+This section lists the processes currently using the NVIDIA GPU:
 
-- **gnome-shell** or **Xwayland** are part of your desktop. That's normal, leave them alone.
-- Any other app has a **Quit** button. Pressing it politely asks the app to close (like clicking its X button), so the GPU can sleep. Save your work in that app first!
+- **gnome-shell** and **Xwayland** are part of the desktop and are normal.
+- Other apps have a **Quit** button, which sends a normal close request (SIGTERM). Save your work in that app first.
 
-If the list says **"GPU is asleep"**, everything is already perfect.
-
----
-
-## Is it safe?
-
-ZenControl was built to be careful:
-
-- **Nothing is permanent.** Restart the laptop and everything is back to factory settings.
-- **It only changes safe settings.** It never touches fan speeds, voltages, drivers, or how the laptop starts up.
-- **It checks every number.** If you ask for something the hardware can't do (like a speed that's too high), it says no and tells you why.
-- **It asks permission.** Only a tiny helper program gets admin rights, and only after you type your password.
-- **Watching doesn't wake the GPU.** The Live section never wakes the NVIDIA GPU just to read its numbers.
+The list only appears while the GPU is awake. "GPU is asleep" means nothing is keeping it on.
 
 ---
 
-## Installing
+## Safety
 
-### What you need
+- **No permanent changes.** Everything resets on reboot.
+- **Limited scope.** It only changes CPU frequency, governor and EPP settings, the ASUS platform profile, NVIDIA clock limits, `nvidia-powerd`, SMT and the charge limit. It never changes fan curves, voltages, SMU/MSR registers, drivers or boot configuration.
+- **Validated input.** Every value is checked against the limits the hardware reports. Invalid requests are rejected with an explanation.
+- **Minimal privileges.** The GUI runs as your user. Only a small helper (`/usr/local/libexec/zencontrol-helper`) runs as root, through `pkexec`, after you authenticate.
+- **No unnecessary GPU wake-ups.** Monitoring reads sensors directly and only calls `nvidia-smi` when the GPU is already awake.
 
-- Fedora Linux (or another Linux with the same parts) on an ASUS Zenbook UX535QE
-- The NVIDIA driver, for the GPU controls
+---
 
-Install the building blocks (on Fedora):
+## Installation
+
+### Requirements
+
+- Linux with the `amd-pstate` CPU driver (`amd-pstate-epp` for energy preference) and the `asus-wmi` platform profile
+- Python 3, GTK 4, libadwaita 1.5+, PyGObject
+- polkit (`pkexec`)
+- NVIDIA proprietary driver (`nvidia-smi`, and `nvidia-powerd` for Dynamic Boost)
+
+On Fedora:
 
 ```sh
 sudo dnf install python3-gobject gtk4 libadwaita polkit
 ```
 
-### Install ZenControl
+### Install
 
 ```sh
 git clone https://github.com/Aliyov/ZenControl.git
@@ -213,71 +210,86 @@ cd ZenControl
 ./install.sh
 ```
 
-It asks for your password once. Then open **ZenControl** from your app menu, or run:
+This installs the root helper, the polkit policy and a desktop entry. Launch **ZenControl** from the app menu, or run:
 
 ```sh
 python3 app/zencontrol.py
 ```
 
-### Remove ZenControl
+### Uninstall
 
 ```sh
 ./install.sh uninstall
 ```
 
+Current settings remain active until the next reboot.
+
 ---
 
 ## Test results
 
-Every mode was tested on a real UX535QE, plugged in, with the GPU and the CPU working as hard as they can (one at a time):
+Tested on a UX535QE on AC power. The GPU was loaded with a CUDA compute workload and the CPU with an AVX2 FMA stress test on all 16 threads, run separately.
 
-| Mode | GPU speed | GPU energy | CPU speed (all cores busy) | CPU temperature |
-|---|---|---|---|---|
-| Max Performance | 1770 MHz | 40 W | up to 4424 MHz on one core | — |
-| Performance | 1770 MHz | 35 W | 3169 MHz | 78 °C |
-| Balanced | 1395 MHz | 28 W | 2795 MHz | 69 °C |
-| Extreme Powersave | 900 MHz | 16 W | 1777 MHz | 52 °C |
+| Mode | GPU clock | GPU power | GPU limit | CPU clock, all cores | CPU temp |
+|---|---|---|---|---|---|
+| Max Performance | 1770 MHz | 40 W | 50 W | 4424 MHz on one core | — |
+| Performance | 1770 MHz | 35 W | 35 W | 3169 MHz | 78 °C |
+| Balanced | 1395 MHz | 28 W | 35 W | 2795 MHz | 69 °C |
+| Extreme Powersave | 900 MHz | 16 W | 35 W | 1777 MHz | 52 °C |
 
-See how going from Performance to Extreme Powersave cuts the GPU's energy by more than half, and the CPU runs 26 °C cooler?
+The stress test found no calculation errors in any mode. Max Performance was tested with a single CPU thread only.
+
+Also verified: Dynamic Boost on/off, SMT on/off (16 ↔ 8 threads online), charge limit 80 % / 100 %, Stock restore, and rejection of invalid values.
 
 ---
 
-## For tinkerers
+## Customizing modes
 
-### Change the modes
+Modes are defined in [`data/profiles.json`](data/profiles.json). Edit the values or add a new entry, and it appears as a new button. Available keys:
 
-The quick modes live in [`data/profiles.json`](data/profiles.json). You can edit the numbers or add your own mode; it shows up as a new button.
+| Key | Values |
+|---|---|
+| `governor` | `"performance"`, `"powersave"` |
+| `epp` | `"performance"`, `"balance_performance"`, `"balance_power"`, `"power"` |
+| `boost` | `true`, `false` |
+| `max_freq_mhz` | 1102–4465 |
+| `platform_profile` | `"performance"`, `"balanced"`, `"quiet"` |
+| `dynamic_boost` | `true`, `false` |
+| `gpu_max_clock_mhz` | 300–2100, or `"default"` for no cap |
+| `gpu_power_w` | watts, or `"default"` (only on GPUs that support it) |
+| `smt` | `true`, `false` |
+| `charge_limit` | 60–100 |
 
-### Project layout
+Keys that are left out are not changed.
+
+---
+
+## Project layout
 
 ```
-app/zencontrol.py         the app window
-app/monitor.py            reads the sensors (never changes anything)
-helper/zencontrol-helper  the small admin helper that applies settings
-data/                     permission rules and the quick modes
-diag/                     stress test and sensor logger for stability testing
+app/zencontrol.py         GTK app
+app/monitor.py            read-only sensor access
+helper/zencontrol-helper  root helper, run via pkexec
+data/                     polkit policy and mode definitions
+diag/                     stress test and sensor logger
 install.sh                installer
 ```
 
-### Technical requirements
+---
 
-- `amd-pstate` CPU driver (`amd-pstate-epp` for energy preference) and the `asus-wmi` platform profile
-- Python 3, GTK 4, libadwaita 1.5+, PyGObject, polkit (`pkexec`)
-- NVIDIA proprietary driver (`nvidia-smi`, `nvidia-powerd` for Dynamic Boost)
-
-### Stability testing
-
-`diag/` has tools to check that the laptop stays stable:
+## Stability testing
 
 ```sh
 gcc -O2 -mavx2 -mfma -pthread diag/stress.c -o diag/stress
-./diag/stress fma 60 16        # heavy CPU math for 60 s on 16 threads, checks every answer
-./diag/stress mem 60 16 256    # writes and checks 256 MB of memory per thread
-python3 diag/logger.py run.csv 95   # logs sensors every second, stops the test if the CPU reaches 95 °C
+./diag/stress fma 60 16             # AVX2 FMA load with result checking, 60 s, 16 threads
+./diag/stress mem 60 16 256         # memory write/verify, 256 MB per thread
+python3 diag/logger.py run.csv 95   # 1 Hz sensor log, stops the load if Tctl reaches 95 °C
 ```
+
+The logger flushes every line to disk, so the data survives a hard reset.
 
 ---
 
 ## Disclaimer
 
-Changing power settings is at your own risk. ZenControl is not made by or connected to ASUS or NVIDIA.
+Changing power settings is at your own risk. ZenControl is not affiliated with ASUS or NVIDIA.
