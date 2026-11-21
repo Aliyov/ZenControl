@@ -151,9 +151,11 @@ class Window(Adw.ApplicationWindow):
                                   description="Setting these wakes the GPU briefly.")
         self.w_dboost = self._switch(gg, "Dynamic Boost (nvidia-powerd)", "dynamic_boost",
                                      "Lets the GPU go above 35 W, up to 50 W")
-        self.w_gpuw = self._spin(gg, "GPU power limit (W)", 10, 50, 1, "gpu_power_w")
+        self.w_gpuw = self._spin(gg, "GPU power limit (W)", 10, 50, 1, "gpu_power_w",
+                                 "Checking support when the GPU wakes")
+        self.w_gpuw.set_sensitive(False)
         self.w_gpuclk = self._spin(gg, "GPU max clock (MHz, 0 = default)", 0, 2100, 50,
-                                   "gpu_max_clock_mhz", "Fallback if the power limit is refused")
+                                   "gpu_max_clock_mhz", "Limits GPU speed and power")
         page.add(gg)
 
         ag = Adw.PreferencesGroup(title="Advanced")
@@ -216,9 +218,13 @@ class Window(Adw.ApplicationWindow):
 
     def _set_gpu_info(self, info):
         self.gpu_info = info
-        if info and "gpu_power_w" not in self.dirty:
+        if not info:
+            return
+        self.w_gpuw.set_sensitive(info["adjustable"])
+        self.w_gpuw.set_subtitle("" if info["adjustable"] else "Not adjustable on this GPU, use GPU max clock")
+        if info["adjustable"] and "gpu_power_w" not in self.dirty:
             self.loading = True
-            self.w_gpuw.set_value(info["limit"])
+            self.w_gpuw.set_value(info["sw_limit"])
             self.loading = False
 
     def _refresh_holders(self):
@@ -253,10 +259,11 @@ class Window(Adw.ApplicationWindow):
         self.w_prof.set_selected(PLATFORM.index(s["platform_profile"]) if s["platform_profile"] in PLATFORM else 0)
         self.w_dboost.set_active(s["dynamic_boost"])
         self.w_smt.set_active(s["smt"])
+        self.w_gpuclk.set_value(s["gpu_max_clock_mhz"])
         if s["charge_limit"]:
             self.w_charge.set_value(s["charge_limit"])
-        if self.gpu_info:
-            self.w_gpuw.set_value(self.gpu_info["limit"])
+        if self.gpu_info and self.gpu_info["adjustable"]:
+            self.w_gpuw.set_value(self.gpu_info["sw_limit"])
         self._update_hints()
         self.loading = False
         self.dirty.clear()

@@ -73,11 +73,13 @@ def gpu_query():
         return None
     try:
         out = subprocess.run(
-            ["nvidia-smi", "--query-gpu=temperature.gpu,power.draw,clocks.gr,power.limit",
+            ["nvidia-smi", "--query-gpu=temperature.gpu,power.draw,clocks.gr,enforced.power.limit,power.limit",
              "--format=csv,noheader,nounits"],
             capture_output=True, text=True, timeout=3).stdout.strip()
-        t, w, c, lim = (x.strip() for x in out.split(","))
-        return {"temp": float(t), "watts": float(w), "mhz": float(c), "limit": float(lim)}
+        t, w, c, lim, sw = (x.strip() for x in out.split(","))
+        adjustable = sw.replace(".", "").isdigit()
+        return {"temp": float(t), "watts": float(w), "mhz": float(c), "limit": float(lim),
+                "sw_limit": float(sw) if adjustable else None, "adjustable": adjustable}
     except Exception:
         return None
 
@@ -109,5 +111,6 @@ def snapshot():
         "platform_profile": read("/sys/firmware/acpi/platform_profile"),
         "smt": read(f"{CPU}/smt/control") == "on",
         "charge_limit": num(f"{bat}/charge_control_end_threshold"),
+        "gpu_max_clock_mhz": num("/run/zencontrol/gpu_max_clock", default=0),
         "dynamic_boost": subprocess.run(["systemctl", "is-active", "--quiet", "nvidia-powerd"]).returncode == 0,
     }

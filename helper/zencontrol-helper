@@ -17,6 +17,7 @@ GPUFAN = "/proc/zenbook_gpufan"
 NVSMI = "/usr/bin/nvidia-smi"
 SYSTEMCTL = "/usr/bin/systemctl"
 STOCK = "/var/lib/zencontrol/stock.json"
+GPU_CLOCK = "/run/zencontrol/gpu_max_clock"
 os.environ["PATH"] = "/usr/bin:/usr/sbin"
 
 
@@ -122,14 +123,22 @@ def set_platform_profile(v):
 
 
 def gpu_limits():
-    out = run([NVSMI, "--query-gpu=power.min_limit,power.max_limit,power.default_limit",
+    out = run([NVSMI, "--query-gpu=power.limit,power.min_limit,power.max_limit,power.default_limit",
                "--format=csv,noheader,nounits"])
-    lo, hi, df = (float(x) for x in out.split(","))
+    try:
+        cur, lo, hi, df = (float(x) for x in out.split(","))
+    except ValueError:
+        return None
     return lo, hi, df
 
 
 def set_gpu_power_w(v):
-    lo, hi, df = gpu_limits()
+    limits = gpu_limits()
+    if limits is None:
+        if v == "default":
+            return "default"
+        raise ValueError("not adjustable on this GPU, use GPU max clock instead")
+    lo, hi, df = limits
     v = df if v == "default" else float(v)
     lo = max(lo, 10.0)
     if not lo <= v <= hi:
@@ -138,21 +147,30 @@ def set_gpu_power_w(v):
     return float(run([NVSMI, "--query-gpu=power.limit", "--format=csv,noheader,nounits"]))
 
 
+def save_gpu_clock(v):
+    os.makedirs(os.path.dirname(GPU_CLOCK), mode=0o755, exist_ok=True)
+    write(GPU_CLOCK, v)
+
+
 def set_gpu_max_clock_mhz(v):
     if v in (0, "default", None):
         run([NVSMI, "-rgc"])
+        save_gpu_clock(0)
         return "default"
     v = int(v)
     top = int(run([NVSMI, "--query-gpu=clocks.max.graphics", "--format=csv,noheader,nounits"]))
     if not 300 <= v <= top:
         raise ValueError(f"must be 300-{top} MHz")
     run([NVSMI, "-lgc", f"0,{v}"])
+    save_gpu_clock(v)
     return v
 
 
 def set_dynamic_boost(v):
     if not isinstance(v, bool):
         raise ValueError("dynamic_boost must be true/false")
+    if v:
+        subprocess.run([SYSTEMCTL, "reset-failed", "nvidia-powerd.service"], capture_output=True)
     run([SYSTEMCTL, "start" if v else "stop", "nvidia-powerd.service"])
     return subprocess.run([SYSTEMCTL, "is-active", "--quiet", "nvidia-powerd.service"]).returncode == 0
 

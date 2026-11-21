@@ -12,7 +12,7 @@ A small GTK4 / libadwaita app for controlling CPU and GPU power on the **ASUS Ze
 - **Quick modes**: Max Performance, Performance, Balanced, Extreme Powersave, and Stock (restores the values saved the first time you apply a change)
 - **Live monitoring**: CPU temperature and package power, per-core clocks, fan RPM, NVIDIA GPU state, battery draw and estimated time left
 - **CPU controls**: boost on/off, max frequency, governor, energy performance preference (EPP), ASUS firmware platform profile
-- **NVIDIA GPU controls**: Dynamic Boost (`nvidia-powerd`), power limit, max graphics clock
+- **NVIDIA GPU controls**: Dynamic Boost (`nvidia-powerd`), max graphics clock, and power limit on GPUs whose driver allows it
 - **Advanced**: SMT on/off, battery charge limit (60–100 %)
 - **GPU wake tracker**: lists the apps keeping the dGPU awake, with a button to quit them so the GPU can sleep
 
@@ -62,12 +62,17 @@ To uninstall:
 | Mode | CPU | GPU | Firmware profile |
 |---|---|---|---|
 | Max Performance | boost on, up to 4465 MHz | stock limit, Dynamic Boost on | performance |
-| Performance | boost off, 3200 MHz | 30 W, Dynamic Boost off | performance |
-| Balanced | 2800 MHz, `balance_performance` | 25 W | balanced |
+| Performance | boost off, 3200 MHz | 30 W base limit, Dynamic Boost off | performance |
+| Balanced | 2800 MHz, `balance_performance` | capped at 1400 MHz | balanced |
 | Extreme Powersave | 1800 MHz, `power` EPP | left alone so it can sleep | quiet |
 | Stock | values saved on first run | default | as saved |
 
 Modes are defined in [`data/profiles.json`](data/profiles.json) and can be edited.
+
+### GPU notes
+
+- On the UX535QE the driver does not allow changing the GPU power limit, so that control is disabled and modes limit the GPU with a clock cap instead. At full load, 1400 MHz draws about 15 W versus about 18 W uncapped (measured with `glxgears`).
+- Without Dynamic Boost the GPU is held at its 30 W base limit. The BIOS only enables Dynamic Boost on AC power.
 
 ## Project layout
 

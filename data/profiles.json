@@ -8,19 +8,19 @@
     }
   },
   "Performance": {
-    "note": "Boost off (3.2 GHz all-core), GPU 30 W, no Dynamic Boost.",
+    "note": "Boost off (3.2 GHz all-core), GPU at its 30 W base limit, no Dynamic Boost.",
     "settings": {
       "governor": "performance", "epp": "performance", "boost": false,
       "max_freq_mhz": 3200, "platform_profile": "performance",
-      "dynamic_boost": false, "gpu_power_w": 30, "gpu_max_clock_mhz": "default"
+      "dynamic_boost": false, "gpu_max_clock_mhz": "default"
     }
   },
   "Balanced": {
-    "note": "2.8 GHz, GPU 25 W, firmware balanced profile.",
+    "note": "2.8 GHz, GPU capped at 1400 MHz, firmware balanced profile.",
     "settings": {
       "governor": "powersave", "epp": "balance_performance", "boost": false,
       "max_freq_mhz": 2800, "platform_profile": "balanced",
-      "dynamic_boost": false, "gpu_power_w": 25, "gpu_max_clock_mhz": "default"
+      "dynamic_boost": false, "gpu_max_clock_mhz": 1400
     }
   },
   "Extreme Powersave": {
