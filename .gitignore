@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+diag/stress
+diag/*.pid
+diag/*.log
+diag/*.csv

@@ -1,0 +1,252 @@
+#!/usr/bin/python3 -I
+"""usage: zencontrol-helper apply '<json>' | stock"""
+import glob
+import json
+import os
+import subprocess
+import sys
+import time
+
+CPU = "/sys/devices/system/cpu"
+BOOST = f"{CPU}/cpufreq/boost"
+SMT = f"{CPU}/smt/control"
+PROFILE = "/sys/firmware/acpi/platform_profile"
+PROFILE_CHOICES = "/sys/firmware/acpi/platform_profile_choices"
+CHARGE = "/sys/class/power_supply/BAT0/charge_control_end_threshold"
+GPUFAN = "/proc/zenbook_gpufan"
+NVSMI = "/usr/bin/nvidia-smi"
+SYSTEMCTL = "/usr/bin/systemctl"
+STOCK = "/var/lib/zencontrol/stock.json"
+os.environ["PATH"] = "/usr/bin:/usr/sbin"
+
+
+def read(path):
+    with open(path) as f:
+        return f.read().strip()
+
+
+def write(path, value):
+    with open(path, "w") as f:
+        f.write(str(value))
+
+
+def policies():
+    return sorted(glob.glob(f"{CPU}/cpufreq/policy[0-9]*"))
+
+
+def p0(name):
+    return read(f"{policies()[0]}/{name}")
+
+
+def hwmon(name):
+    for d in glob.glob("/sys/class/hwmon/hwmon*"):
+        try:
+            if read(f"{d}/name") == name:
+                return d
+        except OSError:
+            pass
+    return None
+
+
+def run(cmd):
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+    if r.returncode:
+        raise RuntimeError((r.stdout + r.stderr).strip().splitlines()[-1] if (r.stdout + r.stderr).strip() else f"exit {r.returncode}")
+    return r.stdout.strip()
+
+
+def set_governor(v):
+    avail = p0("scaling_available_governors").split()
+    if v not in avail:
+        raise ValueError(f"governor must be one of {avail}")
+    for p in policies():
+        if read(f"{p}/scaling_governor") != v:
+            write(f"{p}/scaling_governor", v)
+    return p0("scaling_governor")
+
+
+def set_epp(v):
+    avail = p0("energy_performance_available_preferences").split()
+    if v not in avail:
+        raise ValueError(f"not available with current governor (allowed: {avail})")
+    for p in policies():
+        if read(f"{p}/energy_performance_preference") != v:
+            write(f"{p}/energy_performance_preference", v)
+    return p0("energy_performance_preference")
+
+
+def set_boost(v):
+    if not isinstance(v, bool):
+        raise ValueError("boost must be true/false")
+    write(BOOST, "1" if v else "0")
+    return read(BOOST) == "1"
+
+
+def set_max_freq_mhz(v):
+    v = int(v)
+    floor = int(p0("amd_pstate_lowest_nonlinear_freq")) // 1000
+    ceil = int(p0("cpuinfo_max_freq")) // 1000
+    if not floor <= v <= ceil:
+        raise ValueError(f"must be {floor}-{ceil} MHz")
+    for p in policies():
+        write(f"{p}/scaling_max_freq", v * 1000)
+    return int(p0("scaling_max_freq")) // 1000
+
+
+def fan_state():
+    s = {}
+    asus = hwmon("asus")
+    if asus and os.path.exists(f"{asus}/pwm1_enable"):
+        s["pwm1"] = (f"{asus}/pwm1_enable", read(f"{asus}/pwm1_enable"))
+    if os.path.exists(GPUFAN):
+        s["gpufan"] = (GPUFAN, read(GPUFAN))
+    return s
+
+
+def set_platform_profile(v):
+    choices = read(PROFILE_CHOICES).split()
+    if v not in choices:
+        raise ValueError(f"must be one of {choices}")
+    if read(PROFILE) == v:
+        return v
+    before = fan_state()
+    write(PROFILE, v)
+    time.sleep(0.3)
+    for key, (path, val) in before.items():
+        try:
+            if read(path) != val:
+                write(path, val)
+        except OSError:
+            pass
+    return read(PROFILE)
+
+
+def gpu_limits():
+    out = run([NVSMI, "--query-gpu=power.min_limit,power.max_limit,power.default_limit",
+               "--format=csv,noheader,nounits"])
+    lo, hi, df = (float(x) for x in out.split(","))
+    return lo, hi, df
+
+
+def set_gpu_power_w(v):
+    lo, hi, df = gpu_limits()
+    v = df if v == "default" else float(v)
+    lo = max(lo, 10.0)
+    if not lo <= v <= hi:
+        raise ValueError(f"must be {lo:.0f}-{hi:.0f} W")
+    run([NVSMI, "-pl", f"{v:.0f}"])
+    return float(run([NVSMI, "--query-gpu=power.limit", "--format=csv,noheader,nounits"]))
+
+
+def set_gpu_max_clock_mhz(v):
+    if v in (0, "default", None):
+        run([NVSMI, "-rgc"])
+        return "default"
+    v = int(v)
+    top = int(run([NVSMI, "--query-gpu=clocks.max.graphics", "--format=csv,noheader,nounits"]))
+    if not 300 <= v <= top:
+        raise ValueError(f"must be 300-{top} MHz")
+    run([NVSMI, "-lgc", f"0,{v}"])
+    return v
+
+
+def set_dynamic_boost(v):
+    if not isinstance(v, bool):
+        raise ValueError("dynamic_boost must be true/false")
+    run([SYSTEMCTL, "start" if v else "stop", "nvidia-powerd.service"])
+    return subprocess.run([SYSTEMCTL, "is-active", "--quiet", "nvidia-powerd.service"]).returncode == 0
+
+
+def set_smt(v):
+    if not isinstance(v, bool):
+        raise ValueError("smt must be true/false")
+    write(SMT, "on" if v else "off")
+    return read(SMT) == "on"
+
+
+def set_charge_limit(v):
+    v = int(v)
+    if not 60 <= v <= 100:
+        raise ValueError("must be 60-100 %")
+    write(CHARGE, v)
+    return int(read(CHARGE))
+
+
+SETTERS = [
+    ("governor", set_governor),
+    ("epp", set_epp),
+    ("boost", set_boost),
+    ("max_freq_mhz", set_max_freq_mhz),
+    ("platform_profile", set_platform_profile),
+    ("dynamic_boost", set_dynamic_boost),
+    ("gpu_power_w", set_gpu_power_w),
+    ("gpu_max_clock_mhz", set_gpu_max_clock_mhz),
+    ("smt", set_smt),
+    ("charge_limit", set_charge_limit),
+]
+KEYS = {k for k, _ in SETTERS}
+
+
+def snapshot():
+    s = {
+        "governor": p0("scaling_governor"),
+        "epp": p0("energy_performance_preference"),
+        "boost": read(BOOST) == "1",
+        "max_freq_mhz": int(p0("cpuinfo_max_freq")) // 1000,
+        "platform_profile": read(PROFILE),
+        "dynamic_boost": True,
+        "gpu_power_w": "default",
+        "gpu_max_clock_mhz": "default",
+        "smt": read(SMT) == "on",
+    }
+    try:
+        s["charge_limit"] = int(read(CHARGE))
+    except OSError:
+        pass
+    return s
+
+
+def ensure_stock():
+    if not os.path.exists(STOCK):
+        os.makedirs(os.path.dirname(STOCK), mode=0o755, exist_ok=True)
+        with open(STOCK, "w") as f:
+            json.dump(snapshot(), f, indent=1)
+
+
+def apply(settings):
+    unknown = set(settings) - KEYS
+    if unknown:
+        raise SystemExit(json.dumps({"error": f"unknown keys {sorted(unknown)}"}))
+    ensure_stock()
+    results = {}
+    for key, fn in SETTERS:
+        if key not in settings:
+            continue
+        try:
+            results[key] = {"ok": True, "value": fn(settings[key])}
+        except Exception as e:
+            results[key] = {"ok": False, "error": str(e)}
+    return results
+
+
+def main():
+    if os.geteuid() != 0:
+        sys.exit("must run as root (via pkexec)")
+    if len(sys.argv) == 3 and sys.argv[1] == "apply":
+        raw = sys.argv[2]
+        if len(raw) > 4096:
+            sys.exit("input too large")
+        settings = json.loads(raw)
+        if not isinstance(settings, dict):
+            sys.exit("settings must be an object")
+        print(json.dumps(apply(settings)))
+    elif len(sys.argv) == 2 and sys.argv[1] == "stock":
+        ensure_stock()
+        with open(STOCK) as f:
+            print(json.dumps(apply(json.load(f))))
+    else:
+        sys.exit(__doc__)
+
+
+if __name__ == "__main__":
+    main()

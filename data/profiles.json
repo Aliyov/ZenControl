@@ -1,0 +1,34 @@
+{
+  "Max Performance": {
+    "note": "Stock limits, everything boosts. This is the setup the restarts happened in.",
+    "settings": {
+      "governor": "performance", "epp": "performance", "boost": true,
+      "max_freq_mhz": 4465, "platform_profile": "performance",
+      "dynamic_boost": true, "gpu_power_w": "default", "gpu_max_clock_mhz": "default"
+    }
+  },
+  "Performance": {
+    "note": "Boost off (3.2 GHz all-core), GPU 30 W, no Dynamic Boost.",
+    "settings": {
+      "governor": "performance", "epp": "performance", "boost": false,
+      "max_freq_mhz": 3200, "platform_profile": "performance",
+      "dynamic_boost": false, "gpu_power_w": 30, "gpu_max_clock_mhz": "default"
+    }
+  },
+  "Balanced": {
+    "note": "2.8 GHz, GPU 25 W, firmware balanced profile.",
+    "settings": {
+      "governor": "powersave", "epp": "balance_performance", "boost": false,
+      "max_freq_mhz": 2800, "platform_profile": "balanced",
+      "dynamic_boost": false, "gpu_power_w": 25, "gpu_max_clock_mhz": "default"
+    }
+  },
+  "Extreme Powersave": {
+    "note": "1.8 GHz, power-saving EPP, quiet firmware profile. GPU is left alone so it can sleep.",
+    "settings": {
+      "governor": "powersave", "epp": "power", "boost": false,
+      "max_freq_mhz": 1800, "platform_profile": "quiet",
+      "dynamic_boost": false
+    }
+  }
+}
